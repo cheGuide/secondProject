@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
+
+
+abstract contract Record {
+   // Публичная стейт переменная для хранения времени создания записи
+    uint256 public immutable timeOfCreation;
+
+    function getRecordType() public pure virtual returns(string memory);
+}
+
+
+contract StringRecord is Record{
+    string public record;
+    
+    constructor() {
+        timeOfCreation = block.timestamp;
+    }
+
+    function getRecordType() public pure override returns(string memory){
+        return "string";
+    }
+
+
+    function setRecord(string memory _newRecord) public{
+        record = _newRecord;
+    }
+
+}
+
+
+contract AddressRecord is Record{
+    address public record;
+
+
+    constructor() {
+        timeOfCreation = block.timestamp;
+    }
+
+
+    function getRecordType() public pure override returns(string memory){
+        return "address";
+    }
+
+
+    function setRecord(address _newAddress) public{
+        record = _newAddress;
+    }
+}
+
+
+contract RecordFactory{
+    Record[] public records;
+
+    function addRecord(string memory _record) public{
+        StringRecord newRecord = new StringRecord();
+        newRecord.setRecord(_record);
+        records.push(newRecord);
+    }
+
+    function addRecord(address _record) public{
+        AddressRecord newRecord = new AddressRecord();
+        newRecord.setRecord(_record);
+        records.push(newRecord);
+    }
+}
+
+
+contract RecordStorage{
+    string public records;
+    mapping (address => bool) public factories;
+    address public owner;
+
+   
+    function addRecord() public{
+
+    }
+
+    function addFactory(address _factory) public {
+
+    }
+}
+
+
+contract EnsRecord{
+    
+    string public domain;
+    address public owner;
+
+    function getRecordType() public pure returns(string memory){
+        return "ENS";
+    }
+
+
+    function setOwner() public{
+        owner = msg.sender;
+    }
+}
