@@ -3,19 +3,26 @@ pragma solidity ^0.8.0;
 
 
 abstract contract Record {
-   // Публичная стейт переменная для хранения времени создания записи
     uint256 public immutable timeOfCreation;
 
     function getRecordType() public pure virtual returns(string memory);
 }
 
+abstract contract Factory {
+    Record[] public records;
+    address factoryAddr; 
+}
+
+
 
 contract StringRecord is Record{
     string public record;
     
+
     constructor() {
         timeOfCreation = block.timestamp;
     }
+
 
     function getRecordType() public pure override returns(string memory){
         return "string";
@@ -42,57 +49,120 @@ contract AddressRecord is Record{
         return "address";
     }
 
-
     function setRecord(address _newAddress) public{
         record = _newAddress;
     }
 }
 
 
-contract RecordFactory{
+contract StringRecordFactory is Factory{
+    
+    constructor(){
+        factoryAddr = address(this);
+    }
+
+    function callAddRecord(address _storage, string memory _record) public{
+        RecordStorage(_storage).addRecord(factoryAddr, _record);
+    }
+}
+
+contract AddressRecordFactory is Factory{
+    
+    constructor(){
+        factoryAddr = address(this);
+    }
+
+    function callAddRecord(address _storage, address _record) public{
+        RecordStorage(_storage).addRecord(factoryAddr, _record);
+    }
+}
+
+contract EnsRecordFactory is Factory{
+    
+    constructor(){
+        factoryAddr = address(this);
+    }
+    function callAddRecord(address _storage, string memory _domain, address _owner) public{
+        RecordStorage(_storage).addRecord(factoryAddr, _domain, _owner);
+    }
+}
+
+
+contract EnsRecord is Record{
+    
+    string public domain;
+    address public owner;
+
+    constructor() {
+        timeOfCreation = block.timestamp;
+    }
+
+    function getRecordType() public pure override returns(string memory){
+        return "ENS";
+    }
+
+    function setOwner(address _owner) public{
+        owner = _owner;
+    }
+
+    function setDomain(string memory _domain) public{
+        domain = _domain;
+    }
+}
+
+
+interface IRecordStorage{
+    function addRecord(string memory _record) external;
+    function addRecord(string memory _domain, address _owner) external;
+    function addRecord(address _record) external;
+}
+
+
+contract RecordStorage{
+    
+    mapping (address => bool) public factories;
+    address public owner;
     Record[] public records;
 
-    function addRecord(string memory _record) public{
+    constructor(){
+        owner = msg.sender;
+    }
+
+
+    modifier onlyOwner(){
+        require(owner == msg.sender, "NOT AN OWNER");
+        _;
+    }
+
+    modifier adminFactory(address _factory){
+        require(factories[_factory] == true, "Not an admin");
+        _;
+    }
+
+
+    function addRecord(address _factory, string memory _record) public adminFactory(_factory){
         StringRecord newRecord = new StringRecord();
         newRecord.setRecord(_record);
         records.push(newRecord);
     }
 
-    function addRecord(address _record) public{
+    
+    function addRecord(address _factory, string memory _domain, address _owner) public adminFactory(_factory){
+        EnsRecord newRecord = new EnsRecord();
+        newRecord.setOwner(_owner);
+        newRecord.setDomain(_domain);
+        records.push(newRecord);
+    }
+
+
+    function addRecord(address _factory,address _record) public adminFactory(_factory){
         AddressRecord newRecord = new AddressRecord();
         newRecord.setRecord(_record);
         records.push(newRecord);
     }
-}
 
 
-contract RecordStorage{
-    string public records;
-    mapping (address => bool) public factories;
-    address public owner;
-
-   
-    function addRecord() public{
-
-    }
-
-    function addFactory(address _factory) public {
-
-    }
-}
-
-
-contract EnsRecord{
-    
-    string public domain;
-    address public owner;
-
-    function getRecordType() public pure returns(string memory){
-        return "ENS";
-    }
-
-
-    function setOwner() public{
-        owner = msg.sender;
+    function addFactory(address _factory) public onlyOwner{
+        factories[_factory] = true;
     }
 }
